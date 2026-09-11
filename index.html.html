@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lot Size &amp; Reward Calculator</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#161920; --border:#262b36; --text:#e8eaed;
+    --muted:#9aa3b2; --accent:#3ecf8e; --accent2:#4f8cff; --danger:#ff6b6b;
+    --input-bg:#1d212b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:24px; display:flex; justify-content:center;
+  }
+  .wrap{width:100%; max-width:540px;}
+  h1{font-size:20px; margin:0 0 4px; letter-spacing:.2px;}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:18px;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:20px; margin-bottom:16px;
+  }
+  .card h2{font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 12px;}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; margin-top:14px;}
+  label:first-child{margin-top:0;}
+  input, select{
+    width:100%; background:var(--input-bg); border:1px solid var(--border);
+    color:var(--text); padding:10px 12px; border-radius:9px; font-size:15px;
+    outline:none; transition:border-color .15s;
+  }
+  input:focus, select:focus{border-color:var(--accent2);}
+  .row{display:flex; gap:12px;}
+  .row > div{flex:1;}
+
+  .pairs{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:4px; }
+  .pair-btn{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; padding:10px 4px; background:var(--input-bg); border:1px solid var(--border);
+    border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--text);
+    user-select:none;
+  }
+  .pair-btn .ic{font-size:16px;}
+  .pair-btn.active{border-color:var(--accent); background:#122019; color:var(--accent);}
+
+  .toggle{ display:flex; gap:8px; margin-top:4px; }
+  .toggle-btn{
+    flex:1; text-align:center; padding:9px; background:var(--input-bg); border:1px solid var(--border);
+    border-radius:9px; cursor:pointer; font-weight:600; font-size:13px; user-select:none;
+  }
+  .toggle-btn.active.buy{border-color:var(--accent); background:#122019; color:var(--accent);}
+  .toggle-btn.active.sell{border-color:var(--danger); background:#241417; color:var(--danger);}
+
+  .rr-row{ display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
+  .rr-btn{
+    flex:1; min-width:56px; text-align:center; padding:9px 6px; background:var(--input-bg);
+    border:1px solid var(--border); border-radius:9px; cursor:pointer; font-size:13px; font-weight:600;
+    user-select:none;
+  }
+  .rr-btn.active{border-color:var(--accent2); background:#101a29; color:var(--accent2);}
+
+  .summary{
+    background:linear-gradient(135deg,#141a16,#161920);
+    border:1px solid #234b38; border-radius:14px; padding:20px; margin-bottom:16px;
+  }
+  .headline{font-size:22px; font-weight:700; color:var(--accent); margin-bottom:4px;}
+  .plain{font-size:14px; line-height:1.75; color:var(--text);}
+  .plain b{color:var(--accent);}
+  .plain b.loss{color:var(--danger);}
+
+  .table{ width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
+  .table th, .table td{ padding:8px 6px; text-align:center; border-bottom:1px solid var(--border); }
+  .table th{ color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; }
+  .table tr.highlight td{ color:var(--accent2); font-weight:700; }
+
+  .warn{ margin-top:14px; font-size:12px; color:var(--danger); display:none; }
+  .footnote{color:var(--muted); font-size:11px; margin-top:14px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lot Size &amp; Reward Calculator</h1>
+  <div class="sub">Enter your account and risk once — everything below updates live</div>
+
+  <div class="card">
+    <h2>1. Account &amp; risk</h2>
+    <div class="row">
+      <div><label>Account balance ($)</label><input type="number" id="balance" value="5000" step="1"></div>
+      <div><label>Risk per trade (%)</label><input type="number" id="riskPct" value="1" step="0.1"></div>
+    </div>
+
+    <h2 style="margin-top:20px;">2. Pair</h2>
+    <div class="pairs" id="pairButtons">
+      <div class="pair-btn" data-key="xauusd"><span class="ic">🥇</span>XAU/USD</div>
+      <div class="pair-btn" data-key="eurusd"><span class="ic">🇪🇺</span>EUR/USD</div>
+      <div class="pair-btn" data-key="usdjpy"><span class="ic">🇯🇵</span>USD/JPY</div>
+      <div class="pair-btn" data-key="gbpusd"><span class="ic">🇬🇧</span>GBP/USD</div>
+      <div class="pair-btn" data-key="xagusd"><span class="ic">🥈</span>XAG/USD</div>
+      <div class="pair-btn" data-key="btcusd"><span class="ic">₿</span>BTC/USD</div>
+    </div>
+    <div id="rateRow" style="display:none;">
+      <label id="rateLabel">Current USD/JPY rate</label>
+      <input type="number" id="currentRate" value="153.60" step="0.01">
+    </div>
+
+    <h2 style="margin-top:20px;">3. Trade setup</h2>
+    <div class="toggle">
+      <div class="toggle-btn buy active" data-dir="buy">Buy / Long</div>
+      <div class="toggle-btn sell" data-dir="sell">Sell / Short</div>
+    </div>
+    <label>Entry price (optional — shows exact SL/TP price)</label>
+    <input type="number" id="entryPrice" placeholder="e.g. 4373.85" step="0.01">
+    <label id="slLabel">Stop loss distance (pips)</label>
+    <input type="number" id="slPips" value="15" step="1">
+
+    <h2 style="margin-top:20px;">4. Reward ratio (how big is your target vs your risk?)</h2>
+    <div class="rr-row" id="rrButtons">
+      <div class="rr-btn" data-rr="1">1:1</div>
+      <div class="rr-btn active" data-rr="2">1:2</div>
+      <div class="rr-btn" data-rr="3">1:3</div>
+      <div class="rr-btn" data-rr="4">1:4</div>
+    </div>
+    <label>Or enter a custom ratio (the "2" in 1:2)</label>
+    <input type="number" id="customRR" value="2" step="0.1">
+  </div>
+
+  <div class="summary">
+    <div class="headline" id="lotHeadline">Take 0.00 lots</div>
+    <div class="plain" id="plainSummary">—</div>
+    <div class="warn" id="warnBox">Check your inputs — something is missing or zero.</div>
+  </div>
+
+  <div class="card">
+    <h2>Reward scales with your ratio — quick reference</h2>
+    <table class="table" id="rrTable">
+      <thead><tr><th>Ratio</th><th>Target (pips)</th><th>Profit if hit</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="footnote" id="footnote"></div>
+  </div>
+</div>
+
+<script>
+const PAIRS = {
+  xauusd: { label:'XAU/USD', slLabel:'Stop loss distance (pips, 1 pip = $0.10 move)', pipSize:0.10,
+    note:'Gold: contract size 100 oz/lot, 1 pip = $0.10 move → $10/pip per 1.00 lot (same scale as forex). Confirm against your broker\'s exact contract spec.',
+    pipValue: () => 10, unit:'pip' },
+  eurusd: { label:'EUR/USD', slLabel:'Stop loss distance (pips)', pipSize:0.0001,
+    note:'Standard forex pair, USD is quote currency → fixed $10/pip per 1.00 lot.',
+    pipValue: () => 10, unit:'pip' },
+  gbpusd: { label:'GBP/USD', slLabel:'Stop loss distance (pips)', pipSize:0.0001,
+    note:'Standard forex pair, USD is quote currency → fixed $10/pip per 1.00 lot.',
+    pipValue: () => 10, unit:'pip' },
+  usdjpy: { label:'USD/JPY', slLabel:'Stop loss distance (pips)', pipSize:0.01, needsRate:true, rateLabel:'Current USD/JPY rate',
+    note:'JPY pairs: pip value = (100,000 × 0.01) ÷ current rate, so it shifts with price — keep the rate field updated.',
+    pipValue: (rate) => 1000/rate, unit:'pip' },
+  xagusd: { label:'XAG/USD', slLabel:'Stop loss distance (pips, 1 pip = $0.01 move)', pipSize:0.01,
+    note:'Silver: contract size 5,000 oz/lot, 1 pip = $0.01 move → $50/pip per 1.00 lot. Broker contract sizes vary — check your specs.',
+    pipValue: () => 50, unit:'pip' },
+  btcusd: { label:'BTC/USD', slLabel:'Stop loss distance (points, 1 point = $1 move)', pipSize:1, isPoints:true,
+    note:'Crypto CFDs are usually sized in "points" ($1 move) and vary a lot by broker — treat this as a rough estimate ($1/point per 1.00 lot).',
+    pipValue: () => 1, unit:'point' }
+};
+
+let currentKey='xauusd', currentDir='buy';
+
+const $=id=>document.getElementById(id);
+const balanceEl=$('balance'), riskPctEl=$('riskPct'), slPipsEl=$('slPips'), slLabel=$('slLabel');
+const rateRow=$('rateRow'), rateLabel=$('rateLabel'), currentRateEl=$('currentRate');
+const entryPriceEl=$('entryPrice'), customRREl=$('customRR');
+const footnote=$('footnote'), warnBox=$('warnBox');
+const lotHeadline=$('lotHeadline'), plainSummary=$('plainSummary');
+const pairButtons=document.querySelectorAll('.pair-btn');
+const dirButtons=document.querySelectorAll('.toggle-btn');
+const rrButtons=document.querySelectorAll('.rr-btn');
+const rrTableBody=document.querySelector('#rrTable tbody');
+
+function fmt(n,d=2){ return isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}) : '—'; }
+
+function selectPair(key){
+  currentKey=key;
+  pairButtons.forEach(b=>b.classList.toggle('active', b.dataset.key===key));
+  const cfg=PAIRS[key];
+  slLabel.textContent=cfg.slLabel;
+  rateRow.style.display=cfg.needsRate?'block':'none';
+  if(cfg.needsRate) rateLabel.textContent=cfg.rateLabel;
+  footnote.textContent=cfg.note;
+  calc();
+}
+function selectDir(dir){
+  currentDir=dir;
+  dirButtons.forEach(b=>b.classList.toggle('active', b.dataset.dir===dir));
+  calc();
+}
+function selectRR(rr){
+  rrButtons.forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.rr)===rr));
+  customRREl.value=rr;
+  calc();
+}
+
+function calc(){
+  const cfg=PAIRS[currentKey];
+  const balance=parseFloat(balanceEl.value);
+  const riskPct=parseFloat(riskPctEl.value);
+  const slPips=parseFloat(slPipsEl.value);
+  const rate=parseFloat(currentRateEl.value);
+  const rr=parseFloat(customRREl.value);
+  const entry=parseFloat(entryPriceEl.value);
+  const pipVal=cfg.needsRate?cfg.pipValue(rate):cfg.pipValue();
+
+  const valid = balance>0 && riskPct>0 && slPips>0 && pipVal>0 && rr>0 && (!cfg.needsRate || rate>0);
+  warnBox.style.display = valid?'none':'block';
+  rrTableBody.innerHTML='';
+  if(!valid){
+    lotHeadline.textContent='Take 0.00 lots';
+    plainSummary.textContent='—';
+    return;
+  }
+
+  const risk = balance*(riskPct/100);
+  const lots = risk/(slPips*pipVal);
+  const targetPips = slPips*rr;
+  const profit = risk*rr;
+  const unit = cfg.unit;
+
+  lotHeadline.textContent = `Take ${fmt(lots,2)} lots (${cfg.label})`;
+
+  let priceLines = '';
+  if(entry>0){
+    const step = cfg.pipSize;
+    const slPrice = currentDir==='buy' ? entry - slPips*step : entry + slPips*step;
+    const tpPrice = currentDir==='buy' ? entry + targetPips*step : entry - targetPips*step;
+    priceLines = `<br><br>Entry: <b>${fmt(entry, step<1?4:2)}</b> &nbsp;→&nbsp; Stop-loss price: <b class="loss">${fmt(slPrice, step<1?4:2)}</b> &nbsp;→&nbsp; Target price: <b>${fmt(tpPrice, step<1?4:2)}</b>`;
+  }
+
+  plainSummary.innerHTML =
+    `If your <b>${fmt(slPips,0)}-${unit}</b> stop is hit, you lose <b class="loss">$${fmt(risk)}</b> — that's your planned risk, no more.<br><br>`+
+    `At a <b>1:${fmt(rr,1)}</b> reward ratio, your target is <b>${fmt(targetPips,0)} ${unit}s</b> away. If it hits, you gain <b>$${fmt(profit)}</b>.`+
+    priceLines;
+
+  // reference table for 1,1.5,2,3,4
+  [1,1.5,2,3,4].forEach(r=>{
+    const tp = slPips*r;
+    const p = risk*r;
+    const tr=document.createElement('tr');
+    if(Math.abs(r-rr)<0.001) tr.classList.add('highlight');
+    tr.innerHTML = `<td>1:${fmt(r,1)}</td><td>${fmt(tp,0)}</td><td>$${fmt(p)}</td>`;
+    rrTableBody.appendChild(tr);
+  });
+}
+
+pairButtons.forEach(btn=>btn.addEventListener('click', ()=>selectPair(btn.dataset.key)));
+dirButtons.forEach(btn=>btn.addEventListener('click', ()=>selectDir(btn.dataset.dir)));
+rrButtons.forEach(btn=>btn.addEventListener('click', ()=>selectRR(parseFloat(btn.dataset.rr))));
+[balanceEl,riskPctEl,slPipsEl,currentRateEl,entryPriceEl,customRREl].forEach(el=>{
+  el.addEventListener('input', calc);
+  el.addEventListener('change', calc);
+});
+
+selectPair('xauusd');
+</script>
+</body>
+</html>
